@@ -1,0 +1,35 @@
+Import('env')
+
+TESTS_DIR = Dir('.').abspath
+
+
+def buildTestSuite():
+  import imp, fnmatch, os, shutil, glob
+  print TESTS_DIR
+  generate = imp.load_source('clar_generate', './Support/libs/clar/generate.py')
+
+  suite = generate.TestSuite(TESTS_DIR)
+  suite.load(True)
+  print suite.modules
+  if not suite.write():
+    exit(1)
+  
+  modules = []
+  for path in glob.glob("./*.c"):
+      modules.append(path)
+
+  os.rename(os.path.join(TESTS_DIR, "clar.suite"), os.path.join(TESTS_DIR,"Support/clar.suite"))
+  return modules
+
+support_sources = [
+  "Support/clar.c",
+  "Support/main.c",
+]
+sources = support_sources + buildTestSuite()
+print sources
+# Build one or more test runners.
+program = env.Program('test', source=sources)
+# Depend on the runner to ensure that it's built before running it - Note: using abspath.
+test_alias = Alias('test', [program], program[0].abspath)
+# Simply required.  Without it, 'test' is never considered out of date.
+AlwaysBuild(test_alias)
